@@ -33,6 +33,7 @@ namespace PdfiumViewer.Demo
         private readonly int _endPage;
         private PdfBookmarkCollection _bookmarks;
         private IList<SizeF> _sizes;
+        private IntPtr Doc;
 
         private PdfRangeDocument(IPdfDocument document, int startPage, int endPage)
         {
@@ -91,6 +92,14 @@ namespace PdfiumViewer.Demo
                 if (_sizes == null)
                     _sizes = TranslateSizes(_document.PageSizes);
                 return _sizes;
+            }
+        }
+
+        IntPtr IPdfDocument.Doc
+        {
+            get
+            {
+                return _document.Doc;
             }
         }
 
@@ -298,6 +307,11 @@ namespace PdfiumViewer.Demo
         public void Dispose()
         {
             _document.Dispose();
+        }
+
+        public void AddInkAnnotation(int page, List<PointF> stroke)
+        {
+
         }
     }
 }

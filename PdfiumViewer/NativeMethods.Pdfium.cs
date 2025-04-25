@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using System.IO;
+using System.Drawing;
 
 #pragma warning disable 1591
 
@@ -536,6 +537,91 @@ namespace PdfiumViewer
                 Imports.FPDF_FFLDraw(form, bitmap, page, start_x, start_y, size_x, size_y, rotate, flags);
             }
         }
+
+
+
+        public static IntPtr FPDFPage_CreateAnnot(IntPtr page, int subtype)
+        {
+            lock (LockString)
+            {
+                return Imports.FPDFPage_CreateAnnot(page, subtype);
+            }
+        }
+
+        public static bool FPDFAnnot_SetColor(IntPtr annot, int colorType, uint R, uint G, uint B, uint A)
+        {
+            lock (LockString)
+            {
+                return Imports.FPDFAnnot_SetColor(annot, colorType,R,G,B,A);
+            }
+        }
+
+        public static bool FPDFAnnot_SetBorder(IntPtr annot, float horizontal_radius, float vertical_radius, float border_width)
+        {
+            lock (LockString)
+            {
+                return Imports.FPDFAnnot_SetBorder(annot, horizontal_radius, vertical_radius, border_width);
+            }
+        }
+
+        public static int FPDFAnnot_AddInkStroke(IntPtr annot, IntPtr points, int count)
+        {
+            lock (LockString)
+            {
+                return Imports.FPDFAnnot_AddInkStroke(annot, points, count);
+            }
+        }
+
+        public static bool FPDFAnnot_SetRect(IntPtr annot, ref FS_RECTF rect)
+        {
+            lock (LockString)
+            {
+                return Imports.FPDFAnnot_SetRect(annot, ref rect);
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+        public static FS_POINTF ConvertToPdfCoordinates(float page_height, PointF point)
+        {
+            // PDF坐标系转换（假设UI坐标系左上角为原点）
+            return new FS_POINTF
+            {
+                x = point.X,
+                y = page_height - point.Y // 转换为PDF坐标系
+            };
+        }
+
+        public static FS_RECTF CalculateBoundingBox(List<FS_POINTF> points)
+        {
+            float minX = float.MaxValue, minY = float.MaxValue;
+            float maxX = float.MinValue, maxY = float.MinValue;
+
+            foreach (var p in points)
+            {
+                minX = Math.Min(minX, p.x);
+                minY = Math.Min(minY, p.y);
+                maxX = Math.Max(maxX, p.x);
+                maxY = Math.Max(maxY, p.y);
+            }
+
+            return new FS_RECTF
+            {
+                left = minX - 2,
+                bottom = minY - 2,
+                right = maxX + 2,
+                top = maxY + 2
+            };
+        }
+
+
         #endregion
 
         #region Custom Load/Save Logic
@@ -802,6 +888,25 @@ namespace PdfiumViewer
             [DllImport("pdfium.dll")]
             public static extern void FPDF_FFLDraw(IntPtr form, IntPtr bitmap, IntPtr page, int start_x, int start_y, int size_x, int size_y, int rotate, FPDF flags);
 
+
+
+
+            [DllImport("pdfium.dll")]
+            public static extern IntPtr FPDFPage_CreateAnnot(IntPtr page, int subtype);
+
+            [DllImport("pdfium.dll")]
+            public static extern bool FPDFAnnot_SetColor(IntPtr annot, int colorType, uint R, uint G, uint B, uint A);
+
+            [DllImport("pdfium.dll")]
+            public static extern bool FPDFAnnot_SetBorder(IntPtr annot, float horizontal_radius, float vertical_radius, float border_width);
+
+            [DllImport("pdfium.dll")]
+            public static extern int FPDFAnnot_AddInkStroke(IntPtr annot, IntPtr points, int count);
+
+            [DllImport("pdfium.dll")]
+            public static extern bool FPDFAnnot_SetRect(IntPtr annot, ref FS_RECTF rect);
+
+
             #endregion
         }
 
@@ -974,6 +1079,16 @@ namespace PdfiumViewer
             public int version;
             public IntPtr WriteBlock;
             public IntPtr stream;
+        }
+
+        public const int FPDF_ANNOT_INK = 15;
+        public const int FPDF_COLORTYPE_Color = 1;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct FS_POINTF
+        {
+            public float x;
+            public float y;
         }
         #endregion
     }

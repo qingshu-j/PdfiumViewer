@@ -27,6 +27,8 @@ namespace PdfiumViewer
         /// </summary>
         IList<SizeF> PageSizes { get; }
 
+        IntPtr Doc { get; }
+
         /// <summary>
         /// Renders a page of the PDF document to the provided graphics instance.
         /// </summary>
@@ -252,5 +254,7 @@ namespace PdfiumViewer
         /// <param name="rect">The rectangle to convert.</param>
         /// <returns>The converted rectangle.</returns>
         Rectangle RectangleFromPdf(int page, RectangleF rect);
+
+        void AddInkAnnotation(int page, List<PointF> stroke);
     }
 }

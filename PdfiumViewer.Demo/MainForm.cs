@@ -116,6 +116,9 @@ namespace PdfiumViewer.Demo
                 pdfViewer1.Document?.Dispose();
                 pdfViewer1.Document = OpenDocument(form.FileName);
                 renderToBitmapsToolStripMenuItem.Enabled = true;
+
+                // 启用墨迹批注
+                var annotator = new PdfiumViewer.PdfAnnotation(pdfViewer1);
             }
         }
 

@@ -38,6 +38,11 @@ namespace PdfiumViewer
             LoadDocument(document);
         }
 
+        public IntPtr GetPtr_Doc()
+        {
+            return _document;
+        }
+
         public PdfBookmarkCollection Bookmarks { get; private set; }
 
         public bool RenderPDFPageToDC(int pageNumber, IntPtr dc, int dpiX, int dpiY, int boundsOriginX, int boundsOriginY, int boundsWidth, int boundsHeight, NativeMethods.FPDF flags)
@@ -638,6 +643,53 @@ namespace PdfiumViewer
                 _disposed = true;
             }
         }
+
+        public void AddInkAnnotation(int pageIndex, List<PointF> stroke)
+        {
+            IntPtr pageHandle = NativeMethods.FPDF_LoadPage(_document, pageIndex);
+            //double page_width = NativeMethods.FPDF_GetPageWidth(pageHandle);
+            double page_height = NativeMethods.FPDF_GetPageHeight(pageHandle);
+
+            // 创建注释
+            IntPtr annot = NativeMethods.FPDFPage_CreateAnnot(pageHandle, NativeMethods.FPDF_ANNOT_INK);
+
+            // 设置颜色（红色）
+            NativeMethods.FPDFAnnot_SetColor(annot, NativeMethods.FPDF_COLORTYPE_Color, 255, 0, 0, 255);
+
+            // 设置边框粗细
+            NativeMethods.FPDFAnnot_SetBorder(annot, 0, 0, 2.0f);
+
+            //// 4. 设置弹框内容和标题
+            //FPDFAnnot_SetStringValue(annot, "Contents", (unsigned short *)L"中文内容，哈喽世界");
+            //FPDFAnnot_SetStringValue(annot, "T", (unsigned short *)L"自定义标题");
+
+            // 转换坐标并添加墨迹数据
+            List<NativeMethods.FS_POINTF> allPoints = new List<NativeMethods.FS_POINTF>();
+            // 添加笔画
+            foreach (var point in stroke)
+            {
+                var pdfPoint = NativeMethods.ConvertToPdfCoordinates((float)page_height, point);
+                allPoints.Add(pdfPoint);
+            }
+
+            // 分配内存并复制点数据
+            IntPtr pointsPtr = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(NativeMethods.FS_POINTF)) * allPoints.Count);
+            for (int i = 0; i < allPoints.Count; i++)
+            {
+                Marshal.StructureToPtr(allPoints[i], pointsPtr + i * Marshal.SizeOf(typeof(NativeMethods.FS_POINTF)), false);
+            }
+
+            // 添加笔画数据
+            NativeMethods.FPDFAnnot_AddInkStroke(annot, pointsPtr, allPoints.Count);
+
+            // 设置注释边界框
+            NativeMethods.FS_RECTF rect = NativeMethods.CalculateBoundingBox(allPoints);
+            NativeMethods.FPDFAnnot_SetRect(annot, ref rect);
+
+            // 释放非托管内存
+            Marshal.FreeHGlobal(pointsPtr);
+        }
+
 
         private class PageData : IDisposable
         {

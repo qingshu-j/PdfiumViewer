@@ -53,6 +53,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="HitTest.cs" />
+    <Compile Include="IPdfAnnotation.cs" />
     <Compile Include="IPdfDocument.cs" />
     <Compile Include="IPdfMarker.cs" />
     <Compile Include="LinkClickEventHandler.cs" />
@@ -71,6 +72,7 @@
     <Compile Include="PasswordForm.Designer.cs">
       <DependentUpon>PasswordForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="PdfAnnotation.cs" />
     <Compile Include="PdfBookmarkCollection.cs" />
     <Compile Include="PdfiumResolveEventHandler.cs" />
     <Compile Include="PdfiumResolver.cs" />
