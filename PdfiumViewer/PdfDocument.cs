@@ -19,8 +19,6 @@ namespace PdfiumViewer
         private bool _disposed;
         private PdfFile _file;
         private readonly List<SizeF> _pageSizes;
-        public IntPtr Doc { get; }
-
 
         /// <summary>
         /// Initializes a new instance of the PdfDocument class with the provided path.
@@ -155,7 +153,6 @@ namespace PdfiumViewer
         private PdfDocument(Stream stream, string password)
         {
             _file = new PdfFile(stream, password);
-            Doc = _file.GetPtr_Doc();
 
             _pageSizes = _file.GetPDFDocInfo();
             if (_pageSizes == null)

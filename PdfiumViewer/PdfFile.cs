@@ -38,11 +38,6 @@ namespace PdfiumViewer
             LoadDocument(document);
         }
 
-        public IntPtr GetPtr_Doc()
-        {
-            return _document;
-        }
-
         public PdfBookmarkCollection Bookmarks { get; private set; }
 
         public bool RenderPDFPageToDC(int pageNumber, IntPtr dc, int dpiX, int dpiY, int boundsOriginX, int boundsOriginY, int boundsWidth, int boundsHeight, NativeMethods.FPDF flags)
@@ -647,7 +642,6 @@ namespace PdfiumViewer
         public void AddInkAnnotation(int pageIndex, List<PointF> stroke)
         {
             IntPtr pageHandle = NativeMethods.FPDF_LoadPage(_document, pageIndex);
-            //double page_width = NativeMethods.FPDF_GetPageWidth(pageHandle);
             double page_height = NativeMethods.FPDF_GetPageHeight(pageHandle);
 
             // 创建注释

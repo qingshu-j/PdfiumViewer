@@ -27,8 +27,6 @@ namespace PdfiumViewer
         /// </summary>
         IList<SizeF> PageSizes { get; }
 
-        IntPtr Doc { get; }
-
         /// <summary>
         /// Renders a page of the PDF document to the provided graphics instance.
         /// </summary>

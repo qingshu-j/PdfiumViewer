@@ -37,9 +37,8 @@ namespace PdfiumViewer
         // 坐标转换：屏幕坐标 → PDF页面坐标
         private PointF ScreenToPdf(Point screenPoint, int pageIndex)
         {
-            IntPtr pageHandle = NativeMethods.FPDF_LoadPage(_pdfViewer.Document.Doc, pageIndex);
-            float page_width = (float)NativeMethods.FPDF_GetPageWidth(pageHandle);
-            float page_height = (float)NativeMethods.FPDF_GetPageHeight(pageHandle);
+            float page_width = _pdfViewer.Document.PageSizes[pageIndex].Width;
+            float page_height = _pdfViewer.Document.PageSizes[pageIndex].Height;
 
             //// 计算缩放和滚动偏移
             //float pdfX = (screenPoint.X - viewport.Left) / viewport.Width * page_width;
@@ -81,7 +80,7 @@ namespace PdfiumViewer
             if (_currentStroke.Count < 2) return;
 
             // 创建PDF注释
-            CreateInkAnnotation(_pdfViewer.Renderer.Page, _currentStroke);
+            _pdfViewer.Document.AddInkAnnotation(_pdfViewer.Renderer.Page, _currentStroke);
             _currentStroke.Clear();
 
             // 清空缓冲图
@@ -93,12 +92,6 @@ namespace PdfiumViewer
         private void OnRenderPanelPaint(object sender, PaintEventArgs e)
         {
             e.Graphics.DrawImage(_bufferBitmap, Point.Empty);
-        }
-
-        // 创建Ink注释
-        private void CreateInkAnnotation(int pageIndex, List<PointF> stroke)
-        {
-            _pdfViewer.Document.AddInkAnnotation(pageIndex,stroke);
         }
 
         // 保存PDF
