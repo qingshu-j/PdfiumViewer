@@ -21,32 +21,22 @@ namespace PdfiumViewer
         public PdfAnnotation(PdfViewer pdfViewer)
         {
             _pdfViewer = pdfViewer;
-            var renderPanel = pdfViewer.GetChildAtPoint(Point.Empty) as Panel;
-            if (renderPanel == null) return;
 
             // 初始化双缓冲
-            renderPanel.Paint += OnRenderPanelPaint;
-            renderPanel.MouseDown += OnMouseDown;
-            renderPanel.MouseMove += OnMouseMove;
-            renderPanel.MouseUp += OnMouseUp;
+            _pdfViewer.Renderer.Paint += OnRenderPanelPaint;
+            _pdfViewer.Renderer.MouseDown += OnMouseDown;
+            _pdfViewer.Renderer.MouseMove += OnMouseMove;
+            _pdfViewer.Renderer.MouseUp += OnMouseUp;
 
-            _bufferBitmap = new Bitmap(renderPanel.Width, renderPanel.Height);
+            _bufferBitmap = new Bitmap(_pdfViewer.Renderer.Width, _pdfViewer.Renderer.Height);
             _bufferGraphics = Graphics.FromImage(_bufferBitmap);
         }
 
         // 坐标转换：屏幕坐标 → PDF页面坐标
-        private PointF ScreenToPdf(Point screenPoint, int pageIndex)
+        private PointF ScreenToPdf(Point screenPoint)
         {
-            float page_width = _pdfViewer.Document.PageSizes[pageIndex].Width;
-            float page_height = _pdfViewer.Document.PageSizes[pageIndex].Height;
-
-            //// 计算缩放和滚动偏移
-            //float pdfX = (screenPoint.X - viewport.Left) / viewport.Width * page_width;
-            //float pdfY = (screenPoint.Y - viewport.Top) / viewport.Height * page_height;
-
-            //// 转换坐标系（PDF原点在左下角）
-            //return new PointF(pdfX, page_height - pdfY);
-            return new PointF(screenPoint.X, page_height - screenPoint.Y);
+            var pdfPoint = _pdfViewer.Renderer.PointToPdf(screenPoint);
+            return pdfPoint.Location;
         }
 
         // 鼠标按下：开始新笔画
@@ -54,7 +44,7 @@ namespace PdfiumViewer
         {
             if (e.Button != MouseButtons.Left) return;
             _currentStroke.Clear();
-            _currentStroke.Add(ScreenToPdf(e.Location, _pdfViewer.Renderer.Page));
+            _currentStroke.Add(ScreenToPdf(e.Location));
         }
 
         // 鼠标移动：记录点并实时绘制
@@ -63,14 +53,14 @@ namespace PdfiumViewer
             if (e.Button != MouseButtons.Left || _currentStroke.Count == 0) return;
 
             // 添加新点
-            _currentStroke.Add(ScreenToPdf(e.Location, _pdfViewer.Renderer.Page));
+            _currentStroke.Add(ScreenToPdf(e.Location));
 
             // 在缓冲图上绘制线段
             var prevPoint = e.Location;
             if (_currentStroke.Count >= 2)
             {
                 _bufferGraphics.DrawLine(Pens.Red, prevPoint, e.Location);
-                ((Panel)sender).Invalidate();
+                ((Control)sender).Invalidate();
             }
         }
 
@@ -85,7 +75,7 @@ namespace PdfiumViewer
 
             // 清空缓冲图
             _bufferGraphics.Clear(Color.Transparent);
-            ((Panel)sender).Invalidate();
+            ((Control)sender).Invalidate();
         }
 
         // 渲染双缓冲图
