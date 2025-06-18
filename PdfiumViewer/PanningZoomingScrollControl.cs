@@ -228,7 +228,12 @@ namespace PdfiumViewer
         protected override void OnSetCursor(SetCursorEventArgs e)
         {
             if (_canPan && e.HitTest == HitTest.Client)
-                e.Cursor = PanCursor;
+            {
+                if(_isHandTools)
+                    e.Cursor = PanCursor;
+                else
+                    e.Cursor = Cursors.Cross;
+            }
 
             base.OnSetCursor(e);
         }
