@@ -660,6 +660,8 @@ namespace PdfiumViewer
                 _visiblePageStart = 0;
             if (_visiblePageEnd == -1)
                 _visiblePageEnd = Document.PageCount - 1;
+
+            base.OnPaint(e);
         }
 
         private void DrawPageImage(Graphics graphics, int page, Rectangle pageBounds)

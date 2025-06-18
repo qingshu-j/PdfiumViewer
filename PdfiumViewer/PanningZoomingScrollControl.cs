@@ -33,6 +33,7 @@ namespace PdfiumViewer
         private Point _startOffset;
         private double _zoomMax;
         private double _zoomMin;
+        private bool _isHandTools = true;
 
         public event EventHandler ZoomChanged;
 
@@ -243,6 +244,9 @@ namespace PdfiumViewer
         {
             base.OnMouseDown(e);
 
+            if (!_isHandTools)
+                return;
+
             if (e.Button != MouseButtons.Left || !_canPan)
                 return;
 
@@ -254,6 +258,9 @@ namespace PdfiumViewer
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+
+            if (!_isHandTools)
+                return;
 
             if (!Capture)
                 return;
@@ -267,7 +274,15 @@ namespace PdfiumViewer
         {
             base.OnMouseUp(e);
 
+            if(!_isHandTools)
+                return;
+
             Capture = false;
+        }
+
+        public void SetHandTools(bool bFlag)
+        {
+            _isHandTools = bFlag;
         }
 
         private class WheelFilter : IMessageFilter

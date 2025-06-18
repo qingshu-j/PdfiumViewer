@@ -17,6 +17,7 @@ namespace PdfiumViewer
         private List<PointF> _currentStroke = new List<PointF>();
         private Bitmap _bufferBitmap;
         private Graphics _bufferGraphics;
+        PointF prevPoint;
 
         public PdfAnnotation(PdfViewer pdfViewer)
         {
@@ -56,12 +57,17 @@ namespace PdfiumViewer
             _currentStroke.Add(ScreenToPdf(e.Location));
 
             // 在缓冲图上绘制线段
-            var prevPoint = e.Location;
+            
             if (_currentStroke.Count >= 2)
             {
-                _bufferGraphics.DrawLine(Pens.Red, prevPoint, e.Location);
+                using (var pen = new Pen(Color.Red, 5))
+                {
+                    _bufferGraphics.DrawLine(pen, prevPoint, e.Location);
+                }
+                    
                 ((Control)sender).Invalidate();
             }
+            prevPoint = e.Location;
         }
 
         // 鼠标释放：生成PDF注释
