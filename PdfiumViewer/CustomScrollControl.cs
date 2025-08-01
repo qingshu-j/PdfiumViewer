@@ -11,12 +11,13 @@ using System.Windows.Forms;
 
 namespace PdfiumViewer
 {
+    //一个自定义的可滚动控件基类,为子类提供了显示区域（DisplayRectangle）、滚动条管理、滚动事件、内容偏移等基础能力
     public class CustomScrollControl : Control
     {
-        private Size _displaySize;
-        private Rectangle _displayRect;
-        private readonly ScrollProperties _verticalScroll;
-        private readonly ScrollProperties _horizontalScroll;
+        private Size _displaySize;//内容实际大小
+        private Rectangle _displayRect;//当前显示区域的偏移矩形
+        private readonly ScrollProperties _verticalScroll;//垂直滚动条属性
+        private readonly ScrollProperties _horizontalScroll;//水平滚动条属性
 
         public event ScrollEventHandler Scroll;
 
@@ -65,6 +66,7 @@ namespace PdfiumViewer
             }
         }
 
+        //当前内容的显示区域（带偏移）
         public override Rectangle DisplayRectangle
         {
             get

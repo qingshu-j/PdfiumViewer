@@ -9,13 +9,14 @@ using System.Windows.Forms;
 
 namespace PdfiumViewer
 {
+    //提供了平移（Panning）、缩放（Zooming）、滚动（Scrolling）等高级交互能力的抽象基类
     public abstract class PanningZoomingScrollControl : CustomScrollControl
     {
         public const double DefaultZoomMin = 0.1;
         public const double DefaultZoomMax = 5;
         public const double DefaultZoomFactor = 1.2;
 
-        private static readonly Cursor PanCursor;
+        private static readonly Cursor PanCursor;//手型光标
 
         static PanningZoomingScrollControl()
         {
@@ -27,12 +28,12 @@ namespace PdfiumViewer
             }
         }
 
-        private double _zoom = 1;
-        private bool _canPan;
-        private Point _dragStart;
-        private Point _startOffset;
-        private double _zoomMax;
-        private double _zoomMin;
+        private double _zoom = 1;//当前缩放比例
+        private bool _canPan;//是否可以平移
+        private Point _dragStart;//拖拽平移时的起始点
+        private Point _startOffset;//拖拽平移时的偏移
+        private double _zoomMax;//缩放比例上限
+        private double _zoomMin;//缩放比例下限
         private bool _isHandTools = true;
 
         public event EventHandler ZoomChanged;

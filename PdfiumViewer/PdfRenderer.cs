@@ -10,28 +10,31 @@ namespace PdfiumViewer
     /// <summary>
     /// Control to render PDF documents.
     /// </summary>
+    /// 是 WinForms 下用于 PDF 渲染、缩放、滚动、旋转、链接点击、标记绘制的核心控件
     public class PdfRenderer : PanningZoomingScrollControl
     {
         private static readonly Padding PageMargin = new Padding(4);
 
-        private int _height;
-        private int _maxWidth;
-        private int _maxHeight;
-        private double _documentScaleFactor;
+        private int _width;//文档所有页总宽度
+        private int _height;//文档所有页总高度
+        private int _maxWidth;//页面最大宽度
+        private int _maxHeight;//页面最大高度
+        private double _documentScaleFactor;//文档页面宽高比
         private bool _disposed;
-        private double _scaleFactor;
-        private ShadeBorder _shadeBorder = new ShadeBorder();
+        private double _scaleFactor;//缩放因子,控件高度/页面最大高度
+        private ShadeBorder _shadeBorder = new ShadeBorder();//页面阴影装饰
         private int _suspendPaintCount;
-        private ToolTip _toolTip;
-        private PdfViewerZoomMode _zoomMode;
-        private bool _pageCacheValid;
-        private readonly List<PageCache> _pageCache = new List<PageCache>();
-        private int _visiblePageStart;
-        private int _visiblePageEnd;
-        private PageLink _cachedLink;
-        private DragState _dragState;
-        private PdfRotation _rotation;
-        private List<IPdfMarker>[] _markers;
+        private ToolTip _toolTip;//鼠标悬停提示
+        private PdfViewerZoomMode _zoomMode;//缩放模式，枚举类型
+        private bool _pageCacheValid;//是否为每页建立缓存，包括页面的显示区域、外边界等。true才能正常页面渲染
+        private readonly List<PageCache> _pageCache = new List<PageCache>();//每页的缓存信息的集合，包括页面图像、链接、边界等。
+        private int _visiblePageStart;//起始显示页的索引
+        private int _visiblePageEnd;//结束显示页的索引
+        private PageLink _cachedLink;//鼠标悬浮链接缓存信息
+        private DragState _dragState;//鼠标拖拽链接信息
+        private PdfRotation _rotation;//旋转模式，枚举类型
+        private List<IPdfMarker>[] _markers;//标记集合（高亮，注释等）
+        private PdfViewMode _viewMode = PdfViewMode.OnePageContinuous;//OnePageContinuous,DoublePageContinuous
 
         /// <summary>
         /// The associated PDF document.
@@ -75,7 +78,7 @@ namespace PdfiumViewer
 
                         int hidden = pageCache.Bottom - bottom;
                         if (hidden > 0 && (double)hidden / pageCache.Height > 0.5 && page > 0)
-                            return page - 1;
+                            return page - (int)ViewMode;
 
                         return page;
                     }
@@ -145,6 +148,19 @@ namespace PdfiumViewer
         /// Gets a collection with all markers.
         /// </summary>
         public PdfMarkerCollection Markers { get; }
+
+        /// <summary>
+        /// Get the view mode.
+        /// </summary>
+        public PdfViewMode ViewMode
+        {
+            get { return _viewMode; }
+            set
+            {
+                _viewMode = value;
+                PerformLayout();
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the PdfRenderer class.
@@ -355,7 +371,7 @@ namespace PdfiumViewer
         private Size GetScrollOffset()
         {
             var bounds = GetScrollClientArea();
-            int maxWidth = (int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
+            int maxWidth = (int)ViewMode * ((int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal);
             int leftOffset = (HScroll ? DisplayRectangle.X : (bounds.Width - maxWidth) / 2) + maxWidth / 2;
             int topOffset = VScroll ? DisplayRectangle.Y : 0;
 
@@ -404,17 +420,34 @@ namespace PdfiumViewer
 
         private void ReloadDocument()
         {
+            _width = 0;
             _height = 0;
             _maxWidth = 0;
             _maxHeight = 0;
 
-            foreach (var size in Document.PageSizes)
+            for (int i =0;i< Document.PageSizes.Count;i+= (int)ViewMode)
             {
-                var translated = TranslateSize(size);
-                _height += (int)translated.Height;
-                _maxWidth = Math.Max((int)translated.Width, _maxWidth);
-                _maxHeight = Math.Max((int)translated.Height, _maxHeight);
+                SizeF translated = new SizeF(0,0);
+                int height = 0, width = 0;
+                for (int j = 0; j < (int)ViewMode; j ++)
+                {
+                    var size = Document.PageSizes[i+j];
+                    translated = TranslateSize(size);
+                    _maxWidth = Math.Max((int)translated.Width, _maxWidth);
+                    _maxHeight = Math.Max((int)translated.Height, _maxHeight);
+                    height = Math.Max((int)translated.Height, height);
+                    width += (int)translated.Width;
+                }
+                _height += height;
+                _width = Math.Max(width, _width);
             }
+            //foreach (var size in Document.PageSizes)
+            //{
+            //    var translated = TranslateSize(size);
+            //    _height += (int)translated.Height;
+            //    _maxWidth = Math.Max((int)translated.Width, _maxWidth);
+            //    _maxHeight = Math.Max((int)translated.Height, _maxHeight);
+            //}
 
             _documentScaleFactor = _maxHeight != 0 ? (double)_maxWidth / _maxHeight : 0D;
 
@@ -466,50 +499,112 @@ namespace PdfiumViewer
 
             _pageCacheValid = true;
 
-            int maxWidth = (int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
+            int maxWidth = (int)ViewMode * (int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
             int leftOffset = -maxWidth / 2;
 
             int offset = 0;
 
-            for (int page = 0; page < Document.PageSizes.Count; page++)
+            for (int page = 0; page < Document.PageSizes.Count; page += (int)ViewMode)
             {
-                var size = TranslateSize(Document.PageSizes[page]);
-                int height = (int)(size.Height * _scaleFactor);
-                int fullHeight = height + ShadeBorder.Size.Vertical + PageMargin.Vertical;
-                int width = (int)(size.Width * _scaleFactor);
-                int maxFullWidth = (int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
-                int fullWidth = width + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
-                int thisLeftOffset = leftOffset + (maxFullWidth - fullWidth) / 2;
-
-                while (_pageCache.Count <= page)
+                int height_oneline = 0;
+                int count_oneline = (int)ViewMode;
+                if(page+ (int)ViewMode >= Document.PageSizes.Count)
                 {
+                    count_oneline = Document.PageSizes.Count - page;
+                }
+                for (int j = 0; j < count_oneline; j++)
+                {
+                    var size = TranslateSize(Document.PageSizes[page+j]);
+                    int height = (int)(size.Height * _scaleFactor);
+                    height_oneline = Math.Max(height, height_oneline);
+
+                    int width = (int)(size.Width * _scaleFactor);
+                    int maxFullWidth = (int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
+                    int fullWidth = width + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
+
+                    int thisLeftOffset = 0;
+                    if (j==0)
+                    {
+                        thisLeftOffset = leftOffset + (maxFullWidth - fullWidth) / 2;
+                    }
+                    else
+                    {
+                        thisLeftOffset = _pageCache[page + j - 1].OuterBounds.X + _pageCache[page + j - 1].OuterBounds.Width;
+                    }
+                    
+
+                    //while (_pageCache.Count <= page)
+                    //{
+                        
+                    //}
                     _pageCache.Add(new PageCache());
+
+                    var pageCache = _pageCache[page + j];
+
+                    if (pageCache.Image != null)
+                    {
+                        pageCache.Image.Dispose();
+                        pageCache.Image = null;
+                    }
+
+                    pageCache.Links = null;
+                    pageCache.Bounds = new Rectangle(
+                        thisLeftOffset + ShadeBorder.Size.Left + PageMargin.Left,
+                        offset + ShadeBorder.Size.Top + PageMargin.Top,
+                        width,
+                        height
+                    );
+                    pageCache.OuterBounds = new Rectangle(
+                        thisLeftOffset,
+                        offset,
+                        width + ShadeBorder.Size.Horizontal + PageMargin.Horizontal,
+                        height + ShadeBorder.Size.Vertical + PageMargin.Vertical
+                    );
+
                 }
-
-                var pageCache = _pageCache[page];
-
-                if (pageCache.Image != null)
-                {
-                    pageCache.Image.Dispose();
-                    pageCache.Image = null;
-                }
-
-                pageCache.Links = null;
-                pageCache.Bounds = new Rectangle(
-                    thisLeftOffset + ShadeBorder.Size.Left + PageMargin.Left,
-                    offset + ShadeBorder.Size.Top + PageMargin.Top,
-                    width,
-                    height
-                );
-                pageCache.OuterBounds = new Rectangle(
-                    thisLeftOffset,
-                    offset,
-                    width + ShadeBorder.Size.Horizontal + PageMargin.Horizontal,
-                    height + ShadeBorder.Size.Vertical + PageMargin.Vertical
-                );
-
+                int fullHeight = height_oneline + ShadeBorder.Size.Vertical + PageMargin.Vertical;
                 offset += fullHeight;
             }
+
+            //for (int page = 0; page < Document.PageSizes.Count; page++)
+            //{
+            //    var size = TranslateSize(Document.PageSizes[page]);
+            //    int height = (int)(size.Height * _scaleFactor);
+            //    int fullHeight = height + ShadeBorder.Size.Vertical + PageMargin.Vertical;
+            //    int width = (int)(size.Width * _scaleFactor);
+            //    int maxFullWidth = (int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
+            //    int fullWidth = width + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
+            //    int thisLeftOffset = leftOffset + (maxFullWidth - fullWidth) / 2;
+
+            //    while (_pageCache.Count <= page)
+            //    {
+            //        _pageCache.Add(new PageCache());
+            //    }
+
+            //    var pageCache = _pageCache[page];
+
+            //    if (pageCache.Image != null)
+            //    {
+            //        pageCache.Image.Dispose();
+            //        pageCache.Image = null;
+            //    }
+
+            //    pageCache.Links = null;
+            //    pageCache.Bounds = new Rectangle(
+            //        thisLeftOffset + ShadeBorder.Size.Left + PageMargin.Left,
+            //        offset + ShadeBorder.Size.Top + PageMargin.Top,
+            //        width,
+            //        height
+            //    );
+            //    pageCache.OuterBounds = new Rectangle(
+            //        thisLeftOffset,
+            //        offset,
+            //        width + ShadeBorder.Size.Horizontal + PageMargin.Horizontal,
+            //        height + ShadeBorder.Size.Vertical + PageMargin.Vertical
+            //    );
+
+            //    offset += fullHeight;
+            //}
         }
 
         private List<PageLink> GetPageLinks(int page)
@@ -680,8 +775,13 @@ namespace PdfiumViewer
         /// <returns>The document bounds.</returns>
         protected override Rectangle GetDocumentBounds()
         {
-            int height = (int)(_height * _scaleFactor + (ShadeBorder.Size.Vertical + PageMargin.Vertical) * Document.PageCount);
-            int width = (int)(_maxWidth * _scaleFactor + ShadeBorder.Size.Horizontal + PageMargin.Horizontal);
+            int remainder = 0;
+            if (Document.PageCount % (int)ViewMode != 0)
+            {
+                remainder = 1;
+            }
+            int height = (int)(_height * _scaleFactor + (ShadeBorder.Size.Vertical + PageMargin.Vertical) * (Document.PageCount/(int)ViewMode + remainder));
+            int width = (int)(_width * _scaleFactor + (ShadeBorder.Size.Horizontal + PageMargin.Horizontal) * (int)ViewMode);
             
             var center = new Point(
                 DisplayRectangle.Width / 2,
