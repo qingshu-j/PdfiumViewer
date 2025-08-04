@@ -18,6 +18,7 @@ namespace PdfiumViewer
         private Rectangle _displayRect;//当前显示区域的偏移矩形
         private readonly ScrollProperties _verticalScroll;//垂直滚动条属性
         private readonly ScrollProperties _horizontalScroll;//水平滚动条属性
+        private int _scrollDirection;
 
         public event ScrollEventHandler Scroll;
 
@@ -66,7 +67,16 @@ namespace PdfiumViewer
             }
         }
 
-        //当前内容的显示区域（带偏移）
+        
+        public int ScrollDirection
+        {
+            get
+            {
+                return _scrollDirection;
+            }
+        }
+
+        //所有内容的显示区域（带偏移）
         public override Rectangle DisplayRectangle
         {
             get
@@ -218,6 +228,16 @@ namespace PdfiumViewer
                     ((HandledMouseEventArgs)e).Handled = true;
             }
 
+            if (e.Delta < 0)
+            {
+                _scrollDirection = 1;
+            }
+            else
+            {
+                _scrollDirection = 0;
+            }
+            CorrectionDisplayRect();
+
             base.OnMouseWheel(e);
         }
 
@@ -271,6 +291,8 @@ namespace PdfiumViewer
 
             _displayRect.X = x;
             _displayRect.Y = y;
+
+            //不连续模式时，检查_displayRect的xy
 
             if ((xDelta != 0 || yDelta != 0) && IsHandleCreated && preserveContents)
             {
@@ -698,6 +720,11 @@ namespace PdfiumViewer
                 default:
                     return base.IsInputKey(keyData);
             }
+        }
+
+        protected virtual void CorrectionDisplayRect()
+        {
+            ;
         }
 
         private class ScrollProperties

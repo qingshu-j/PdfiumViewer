@@ -1,11 +1,14 @@
 ﻿
 namespace PdfiumViewer
 {
-    public enum PdfViewMode
+    public enum PdfViewMode_Scroll
     {
-        OnePage,
-        OnePageContinuous,
-        DoublePageContinuous,
+        Continuous,
+        DisContinuous
+    }
+    public enum PdfViewMode_PageCount
+    {
+        OnePage = 1,
         DoublePage
     }
 }

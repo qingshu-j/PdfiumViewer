@@ -34,7 +34,8 @@ namespace PdfiumViewer
         private DragState _dragState;//鼠标拖拽链接信息
         private PdfRotation _rotation;//旋转模式，枚举类型
         private List<IPdfMarker>[] _markers;//标记集合（高亮，注释等）
-        private PdfViewMode _viewMode = PdfViewMode.OnePageContinuous;//OnePageContinuous,DoublePageContinuous
+        private PdfViewMode_Scroll _viewModeScroll = PdfViewMode_Scroll.Continuous;
+        private PdfViewMode_PageCount _viewModePageCount = PdfViewMode_PageCount.OnePage;
 
         /// <summary>
         /// The associated PDF document.
@@ -78,7 +79,7 @@ namespace PdfiumViewer
 
                         int hidden = pageCache.Bottom - bottom;
                         if (hidden > 0 && (double)hidden / pageCache.Height > 0.5 && page > 0)
-                            return page - (int)ViewMode;
+                            return page - (int)ViewModePageCount;
 
                         return page;
                     }
@@ -150,14 +151,27 @@ namespace PdfiumViewer
         public PdfMarkerCollection Markers { get; }
 
         /// <summary>
-        /// Get the view mode.
+        /// Is the view mode continuous?.
         /// </summary>
-        public PdfViewMode ViewMode
+        public PdfViewMode_Scroll ViewModeScroll
         {
-            get { return _viewMode; }
+            get { return _viewModeScroll; }
             set
             {
-                _viewMode = value;
+                _viewModeScroll = value;
+                PerformLayout();
+            }
+        }
+
+        /// <summary>
+        /// Get the view mode.
+        /// </summary>
+        public PdfViewMode_PageCount ViewModePageCount
+        {
+            get { return _viewModePageCount; }
+            set
+            {
+                _viewModePageCount = value;
                 PerformLayout();
             }
         }
@@ -371,7 +385,7 @@ namespace PdfiumViewer
         private Size GetScrollOffset()
         {
             var bounds = GetScrollClientArea();
-            int maxWidth = (int)ViewMode * ((int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal);
+            int maxWidth = (int)ViewModePageCount * ((int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal);
             int leftOffset = (HScroll ? DisplayRectangle.X : (bounds.Width - maxWidth) / 2) + maxWidth / 2;
             int topOffset = VScroll ? DisplayRectangle.Y : 0;
 
@@ -425,11 +439,16 @@ namespace PdfiumViewer
             _maxWidth = 0;
             _maxHeight = 0;
 
-            for (int i =0;i< Document.PageSizes.Count;i+= (int)ViewMode)
+            for (int i =0;i< Document.PageSizes.Count;i+= (int)ViewModePageCount)
             {
                 SizeF translated = new SizeF(0,0);
                 int height = 0, width = 0;
-                for (int j = 0; j < (int)ViewMode; j ++)
+                int count_oneline = (int)ViewModePageCount;
+                if (i + (int)ViewModePageCount >= Document.PageSizes.Count)
+                {
+                    count_oneline = Document.PageSizes.Count - i;
+                }
+                for (int j = 0; j < count_oneline; j ++)
                 {
                     var size = Document.PageSizes[i+j];
                     translated = TranslateSize(size);
@@ -441,13 +460,6 @@ namespace PdfiumViewer
                 _height += height;
                 _width = Math.Max(width, _width);
             }
-            //foreach (var size in Document.PageSizes)
-            //{
-            //    var translated = TranslateSize(size);
-            //    _height += (int)translated.Height;
-            //    _maxWidth = Math.Max((int)translated.Width, _maxWidth);
-            //    _maxHeight = Math.Max((int)translated.Height, _maxHeight);
-            //}
 
             _documentScaleFactor = _maxHeight != 0 ? (double)_maxWidth / _maxHeight : 0D;
 
@@ -499,16 +511,16 @@ namespace PdfiumViewer
 
             _pageCacheValid = true;
 
-            int maxWidth = (int)ViewMode * (int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
+            int maxWidth = (int)ViewModePageCount * (int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
             int leftOffset = -maxWidth / 2;
 
             int offset = 0;
 
-            for (int page = 0; page < Document.PageSizes.Count; page += (int)ViewMode)
+            for (int page = 0; page < Document.PageSizes.Count; page += (int)ViewModePageCount)
             {
                 int height_oneline = 0;
-                int count_oneline = (int)ViewMode;
-                if(page+ (int)ViewMode >= Document.PageSizes.Count)
+                int count_oneline = (int)ViewModePageCount;
+                if(page+ (int)ViewModePageCount >= Document.PageSizes.Count)
                 {
                     count_oneline = Document.PageSizes.Count - page;
                 }
@@ -531,12 +543,7 @@ namespace PdfiumViewer
                     {
                         thisLeftOffset = _pageCache[page + j - 1].OuterBounds.X + _pageCache[page + j - 1].OuterBounds.Width;
                     }
-                    
 
-                    //while (_pageCache.Count <= page)
-                    //{
-                        
-                    //}
                     _pageCache.Add(new PageCache());
 
                     var pageCache = _pageCache[page + j];
@@ -565,46 +572,6 @@ namespace PdfiumViewer
                 int fullHeight = height_oneline + ShadeBorder.Size.Vertical + PageMargin.Vertical;
                 offset += fullHeight;
             }
-
-            //for (int page = 0; page < Document.PageSizes.Count; page++)
-            //{
-            //    var size = TranslateSize(Document.PageSizes[page]);
-            //    int height = (int)(size.Height * _scaleFactor);
-            //    int fullHeight = height + ShadeBorder.Size.Vertical + PageMargin.Vertical;
-            //    int width = (int)(size.Width * _scaleFactor);
-            //    int maxFullWidth = (int)(_maxWidth * _scaleFactor) + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
-            //    int fullWidth = width + ShadeBorder.Size.Horizontal + PageMargin.Horizontal;
-            //    int thisLeftOffset = leftOffset + (maxFullWidth - fullWidth) / 2;
-
-            //    while (_pageCache.Count <= page)
-            //    {
-            //        _pageCache.Add(new PageCache());
-            //    }
-
-            //    var pageCache = _pageCache[page];
-
-            //    if (pageCache.Image != null)
-            //    {
-            //        pageCache.Image.Dispose();
-            //        pageCache.Image = null;
-            //    }
-
-            //    pageCache.Links = null;
-            //    pageCache.Bounds = new Rectangle(
-            //        thisLeftOffset + ShadeBorder.Size.Left + PageMargin.Left,
-            //        offset + ShadeBorder.Size.Top + PageMargin.Top,
-            //        width,
-            //        height
-            //    );
-            //    pageCache.OuterBounds = new Rectangle(
-            //        thisLeftOffset,
-            //        offset,
-            //        width + ShadeBorder.Size.Horizontal + PageMargin.Horizontal,
-            //        height + ShadeBorder.Size.Vertical + PageMargin.Vertical
-            //    );
-
-            //    offset += fullHeight;
-            //}
         }
 
         private List<PageLink> GetPageLinks(int page)
@@ -738,6 +705,22 @@ namespace PdfiumViewer
 
                 if (e.ClipRectangle.IntersectsWith(rectangle))
                 {
+                    if (ViewModeScroll == PdfViewMode_Scroll.DisContinuous)
+                    {
+                        bool bShow = false;
+                        for(int i = 0;i<(int)ViewModePageCount;i++)
+                        {
+                            if(page == Page+i)
+                            {
+                                bShow = true;
+                                break;
+                            }
+                        }
+                        if(!bShow)
+                        {
+                            continue;
+                        }
+                    }
                     var pageBounds = pageCache.Bounds;
                     pageBounds.Offset(offset.Width, offset.Height);
 
@@ -776,12 +759,12 @@ namespace PdfiumViewer
         protected override Rectangle GetDocumentBounds()
         {
             int remainder = 0;
-            if (Document.PageCount % (int)ViewMode != 0)
+            if (Document.PageCount % (int)ViewModePageCount != 0)
             {
                 remainder = 1;
             }
-            int height = (int)(_height * _scaleFactor + (ShadeBorder.Size.Vertical + PageMargin.Vertical) * (Document.PageCount/(int)ViewMode + remainder));
-            int width = (int)(_width * _scaleFactor + (ShadeBorder.Size.Horizontal + PageMargin.Horizontal) * (int)ViewMode);
+            int height = (int)(_height * _scaleFactor + (ShadeBorder.Size.Vertical + PageMargin.Vertical) * (Document.PageCount/(int)ViewModePageCount + remainder));
+            int width = (int)(_width * _scaleFactor + (ShadeBorder.Size.Horizontal + PageMargin.Horizontal) * (int)ViewModePageCount);
             
             var center = new Point(
                 DisplayRectangle.Width / 2,
@@ -1080,6 +1063,48 @@ namespace PdfiumViewer
                     displayRectangle.X,
                     -offset
                 ));
+            }
+        }
+
+        //不连续模式 才起作用
+        protected override void CorrectionDisplayRect()
+        {
+            //不连续模式下只能显示一页
+            //滚轮滚动，向下翻页时，当前页面的下边缘和下一页的上边缘在范围内时，需手动调整_displayRect位置和滚动条位置（调用SyncScrollbars()）
+            //滚轮滚动，向上翻页时，当前页面的上边缘和上一页的下边缘在范围内时，需手动调整_displayRect位置和滚动条位置（调用SyncScrollbars()）
+            //需在PdfRenderer中调用，才能获取控件范围，判断是否在范围内
+
+            if (ViewModeScroll == PdfViewMode_Scroll.DisContinuous)
+            {
+                var offset = GetScrollOffset();
+                if (ScrollDirection == 1)
+                {
+                    if (Page < Document.PageSizes.Count - (int)ViewModePageCount)
+                    {
+                        Rectangle rectangle_cur = _pageCache[Page].OuterBounds;
+                        Rectangle rectangle_next = _pageCache[Page + (int)ViewModePageCount].OuterBounds;
+                        rectangle_cur.Offset(offset.Width, offset.Height);
+                        rectangle_next.Offset(offset.Width, offset.Height);
+                        if (ClientRectangle.IntersectsWith(rectangle_cur) && ClientRectangle.IntersectsWith(rectangle_next))
+                        {
+                            SetDisplayRectLocation(new Point(0, -_pageCache[Page + (int)ViewModePageCount].OuterBounds.Top));
+                        }
+                    }
+                }
+                else
+                {
+                    if (Page > (int)ViewModePageCount - 1)
+                    {
+                        Rectangle rectangle_cur = _pageCache[Page].OuterBounds;
+                        Rectangle rectangle_pre = _pageCache[Page - (int)ViewModePageCount].OuterBounds;
+                        rectangle_cur.Offset(offset.Width, offset.Height);
+                        rectangle_pre.Offset(offset.Width, offset.Height);
+                        if (ClientRectangle.IntersectsWith(rectangle_cur) && ClientRectangle.IntersectsWith(rectangle_pre))
+                        {
+                            SetDisplayRectLocation(new Point(0, -_pageCache[Page - (int)ViewModePageCount].OuterBounds.Top));
+                        }
+                    }
+                }
             }
         }
 

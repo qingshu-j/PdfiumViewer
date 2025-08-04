@@ -160,8 +160,13 @@ namespace PdfiumViewer
             }
             else
             {
-                base.OnMouseWheel(e);
+                //base.OnMouseWheel(e);
             }
+        }
+
+        protected override void CorrectionDisplayRect()
+        {
+            ;
         }
 
         protected abstract Rectangle GetDocumentBounds();
